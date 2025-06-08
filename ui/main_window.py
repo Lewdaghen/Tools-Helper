@@ -11,8 +11,11 @@ class MainWindow:
         
         self.root = tk.Tk()
         self.root.title("Tools Helper - CSLoL Skin Processor")
-        self.root.geometry("1000x750")
-        self.root.minsize(900, 700)
+        self.root.geometry("1200x800")
+        self.root.minsize(1000, 700)
+        
+        self.current_module = None
+        self.skin_processor_tab = None
         
         self.setup_theme()
         self.setup_ui()
@@ -31,91 +34,200 @@ class MainWindow:
                 self.style.map(style_name, **config['map'])
     
     def setup_ui(self):
-        main_frame = ttk.Frame(self.root, padding="20")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        main_frame = self.create_frame(self.root, AppTheme.BG_DARK)
+        main_frame.pack(fill=tk.BOTH, expand=True)
         
-        self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(0, weight=1)
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(2, weight=1)
-        
-        self.setup_title(main_frame)
         self.setup_header(main_frame)
-        self.setup_notebook(main_frame)
+        self.setup_content_area(main_frame)
     
-    def setup_title(self, parent):
-        title_frame = ttk.Frame(parent)
-        title_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 20))
-        
-        title_label = ttk.Label(
-            title_frame, 
-            text="🛠️ Tools Helper", 
-            font=("Segoe UI", 20, "bold")
+    def create_frame(self, parent, bg_color, **kwargs):
+        frame = tk.Frame(parent, bg=bg_color, **kwargs)
+        return frame
+    
+    def create_label(self, parent, text, bg_color, fg_color, font, **kwargs):
+        label = tk.Label(
+            parent,
+            text=text,
+            bg=bg_color,
+            fg=fg_color,
+            font=font,
+            **kwargs
         )
-        title_label.configure(foreground=AppTheme.TEXT_ACCENT)
-        title_label.grid(row=0, column=0, sticky=tk.W)
+        return label
+    
+    def create_button(self, parent, text, command, style_variant="primary", custom_font=None, **kwargs):
+        button_style = AppTheme.get_button_style(style_variant).copy()
+        if custom_font:
+            button_style['font'] = custom_font
+        button_style.update(kwargs)
         
-        subtitle_label = ttk.Label(
-            title_frame, 
-            text="CSLoL Skin Manager",
-            font=("Segoe UI", 12)
+        button = tk.Button(
+            parent,
+            text=text,
+            command=command,
+            **button_style
         )
-        subtitle_label.configure(foreground=AppTheme.TEXT_SECONDARY)
-        subtitle_label.grid(row=1, column=0, sticky=tk.W, pady=(5, 0))
+        return button
     
     def setup_header(self, parent):
-        header_card = tk.Frame(parent, bg=AppTheme.BG_CARD, relief="flat", bd=0)
-        header_card.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 20))
-        header_card.columnconfigure(1, weight=1)
+        header_frame = self.create_frame(parent, AppTheme.BG_CARD, height=80)
+        header_frame.pack(fill=tk.X, padx=10, pady=(10, 0))
+        header_frame.pack_propagate(False)
         
-        inner_frame = tk.Frame(header_card, bg=AppTheme.BG_CARD)
-        inner_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=20, pady=15)
-        inner_frame.columnconfigure(1, weight=1)
+        header_content = self.create_frame(header_frame, AppTheme.BG_CARD)
+        header_content.pack(fill=tk.BOTH, expand=True, padx=20, pady=15)
         
-        path_label = tk.Label(
-            inner_frame,
-            text="📁 CSLoL Manager Path:",
-            bg=AppTheme.BG_CARD,
-            fg=AppTheme.TEXT_PRIMARY,
-            font=("Segoe UI", 11, "bold")
-        )
-        path_label.grid(row=0, column=0, sticky=tk.W, padx=(0, 15))
-        
-        self.path_var = tk.StringVar()
-        self.path_label = tk.Label(
-            inner_frame,
-            textvariable=self.path_var,
-            bg=AppTheme.BG_CARD,
-            fg=AppTheme.TEXT_SECONDARY,
-            font=("Segoe UI", 10),
-            anchor="w"
-        )
-        self.path_label.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(0, 15))
-        
-        configure_btn = tk.Button(
-            inner_frame,
-            text="🔧 Configure",
-            command=self.configure_path,
-            **AppTheme.get_button_style("primary"),
-            padx=20,
-            pady=8
-        )
-        configure_btn.grid(row=0, column=2)
+        self.setup_header_title(header_content)
+        self.setup_header_controls(header_content)
         
         self.update_header()
     
-    def setup_notebook(self, parent):
-        notebook_frame = tk.Frame(parent, bg=AppTheme.BG_DARK)
-        notebook_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        notebook_frame.columnconfigure(0, weight=1)
-        notebook_frame.rowconfigure(0, weight=1)
+    def setup_header_title(self, parent):
+        title_frame = self.create_frame(parent, AppTheme.BG_CARD)
+        title_frame.pack(side=tk.LEFT, fill=tk.Y)
         
-        self.notebook = ttk.Notebook(notebook_frame)
-        self.notebook.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.create_label(
+            title_frame,
+            "🛠️ Tools Helper",
+            AppTheme.BG_CARD,
+            AppTheme.TEXT_ACCENT,
+            ("Segoe UI", 18, "bold")
+        ).pack(anchor="w")
         
-        self.skin_processor_tab = SkinProcessorTab(self.notebook, self.config, self.logger)
-        self.notebook.add(self.skin_processor_tab.frame, text="🎨 Skin Processor")
+        self.create_label(
+            title_frame,
+            "CSLoL Skin Manager",
+            AppTheme.BG_CARD,
+            AppTheme.TEXT_SECONDARY,
+            ("Segoe UI", 11)
+        ).pack(anchor="w")
+    
+    def setup_header_controls(self, parent):
+        path_frame = self.create_frame(parent, AppTheme.BG_CARD)
+        path_frame.pack(side=tk.RIGHT, fill=tk.Y)
         
+        self.path_var = tk.StringVar()
+        self.path_label = self.create_label(
+            path_frame,
+            "",
+            AppTheme.BG_CARD,
+            AppTheme.TEXT_SECONDARY,
+            ("Segoe UI", 10),
+            textvariable=self.path_var,
+            anchor="e"
+        )
+        self.path_label.pack(anchor="e", pady=(0, 5))
+        
+        configure_btn = self.create_button(
+            path_frame,
+            "🔧 Configure Path",
+            self.configure_path,
+            custom_font=("Segoe UI", 9),
+            padx=15,
+            pady=5
+        )
+        configure_btn.pack(anchor="e")
+    
+    def setup_content_area(self, parent):
+        content_frame = self.create_frame(parent, AppTheme.BG_DARK)
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        self.setup_sidebar(content_frame)
+        self.setup_main_content(content_frame)
+        self.switch_module("skin_processor")
+    
+    def setup_sidebar(self, parent):
+        sidebar_frame = self.create_frame(parent, AppTheme.BG_MEDIUM, width=250)
+        sidebar_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+        sidebar_frame.pack_propagate(False)
+        
+        sidebar_content = self.create_frame(sidebar_frame, AppTheme.BG_MEDIUM)
+        sidebar_content.pack(fill=tk.BOTH, expand=True, padx=15, pady=20)
+        
+        self.setup_modules_section(sidebar_content)
+        self.setup_info_section(sidebar_content)
+    
+    def setup_modules_section(self, parent):
+        self.create_label(
+            parent,
+            "📚 MODULES",
+            AppTheme.BG_MEDIUM,
+            AppTheme.PRIMARY,
+            ("Segoe UI", 12, "bold")
+        ).pack(anchor="w", pady=(0, 15))
+        
+        self.skin_processor_btn = tk.Button(
+            parent,
+            text="🎨 Skin Processor",
+            command=lambda: self.switch_module("skin_processor"),
+            bg=AppTheme.BG_MEDIUM,
+            fg=AppTheme.TEXT_ACCENT,
+            activebackground=AppTheme.PRIMARY,
+            activeforeground=AppTheme.TEXT_PRIMARY,
+            relief="flat",
+            borderwidth=0,
+            font=("Segoe UI", 11, "bold"),
+            cursor="hand2",
+            anchor="w",
+            padx=15,
+            pady=12
+        )
+        self.skin_processor_btn.pack(fill=tk.X, pady=(0, 5))
+    
+    def setup_info_section(self, parent):
+        separator = self.create_frame(parent, AppTheme.BORDER, height=1)
+        separator.pack(fill=tk.X, pady=20)
+        
+        self.create_label(
+            parent,
+            "ℹ️ INFORMATION",
+            AppTheme.BG_MEDIUM,
+            AppTheme.PRIMARY,
+            ("Segoe UI", 12, "bold")
+        ).pack(anchor="w", pady=(0, 10))
+        
+        self.create_label(
+            parent,
+            "Select a module from\nthe list above to\nget started.",
+            AppTheme.BG_MEDIUM,
+            AppTheme.TEXT_SECONDARY,
+            ("Segoe UI", 10),
+            justify=tk.LEFT,
+            anchor="w"
+        ).pack(anchor="w")
+    
+    def setup_main_content(self, parent):
+        self.main_content_frame = self.create_frame(parent, AppTheme.BG_DARK)
+        self.main_content_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+    
+    def switch_module(self, module_name):
+        if self.current_module == module_name:
+            return
+        
+        if not hasattr(self, 'main_content_frame') or not self.main_content_frame:
+            return
+            
+        self.update_sidebar_selection(module_name)
+        self.clear_main_content()
+        self.load_module(module_name)
+        
+        self.current_module = module_name
+    
+    def update_sidebar_selection(self, module_name):
+        is_selected = module_name == "skin_processor"
+        self.skin_processor_btn.configure(
+            bg=AppTheme.PRIMARY if is_selected else AppTheme.BG_MEDIUM,
+            fg=AppTheme.TEXT_PRIMARY if is_selected else AppTheme.TEXT_ACCENT
+        )
+    
+    def clear_main_content(self):
+        for widget in self.main_content_frame.winfo_children():
+            widget.destroy()
+    
+    def load_module(self, module_name):
+        if module_name == "skin_processor":
+            self.skin_processor_tab = SkinProcessorTab(self.main_content_frame, self.config, self.logger)
+    
     def update_header(self):
         path = self.config.get_cslol_path()
         if path and self.config.validate_cslol_path():
@@ -125,7 +237,7 @@ class MainWindow:
             self.path_var.set(f"❌ {path} (Invalid)")
             self.path_label.configure(fg=AppTheme.ERROR)
         else:
-            self.path_var.set("⚠️ Not configured")
+            self.path_var.set("⚠️ Path not configured")
             self.path_label.configure(fg=AppTheme.WARNING)
     
     def configure_path(self):
@@ -143,7 +255,7 @@ class MainWindow:
                 self.update_header()
                 self.logger.log(f"CSLoL Manager path set to: {path}")
                 
-                if hasattr(self.skin_processor_tab, 'load_skins'):
+                if self.skin_processor_tab and hasattr(self.skin_processor_tab, 'load_skins'):
                     self.skin_processor_tab.load_skins()
             else:
                 messagebox.showerror(
