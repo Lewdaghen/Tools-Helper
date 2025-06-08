@@ -194,6 +194,7 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+.cursorrules
 
 # CSLoL Skin Processor specific
 process*/
